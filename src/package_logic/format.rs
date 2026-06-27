@@ -9,24 +9,28 @@ const FOOTER_MAGIC: &[u8; 8] = b"VPKFOOT\0";
 const FOOTER_SIZE: u64 = 25;
 const IS_LAUNCHED: u8 = 0;
 
+/// A single packed payload entry stored in the manifest.
 struct Entry {
     name: String,
     offset: u64,
     size: u64,
 }
 
+/// Read a little-endian `u32` from the current file position.
 fn read_u32(file: &mut File) -> io::Result<u32> {
     let mut buf = [0u8; 4];
     file.read_exact(&mut buf)?;
     Ok(u32::from_le_bytes(buf))
 }
 
+/// Read a little-endian `u64` from the current file position.
 fn read_u64(file: &mut File) -> io::Result<u64> {
     let mut buf = [0u8; 8];
     file.read_exact(&mut buf)?;
     Ok(u64::from_le_bytes(buf))
 }
 
+/// Build a packed executable by appending payloads and a manifest footer.
 pub fn pack_files<P, O>(launcher_path: P, output_path: O, payload_paths: &[String]) -> io::Result<()>
 where
     P: AsRef<Path>,
@@ -47,6 +51,7 @@ where
         entries.push(Entry { name: payload_path.clone(), offset, size });
     }
 
+    // The manifest is appended after the launcher + payload blobs.
     let manifest_offset = output.stream_position()?;
     output.write_all(&(entries.len() as u32).to_le_bytes())?;
 
@@ -62,11 +67,13 @@ where
     output.write_all(FOOTER_MAGIC)?;
     output.write_all(&manifest_offset.to_le_bytes())?;
     output.write_all(&manifest_size.to_le_bytes())?;
+    // Reserved flag for launch bookkeeping.
     output.write_all(&[IS_LAUNCHED])?;
 
     Ok(())
 }
 
+/// Read the packed file footer, locate the best matching payload, and extract it.
 pub fn read_back(path: &str) -> io::Result<()> {
     let mut file = OpenOptions::new().read(true).open(path)?;
 
@@ -85,6 +92,7 @@ pub fn read_back(path: &str) -> io::Result<()> {
         return Err(Error::new(ErrorKind::InvalidData, "invalid footer magic"));
     }
 
+    // Footer layout: magic, manifest offset, manifest size, launch flag.
     let manifest_offset = read_u64(&mut file)?;
     let manifest_size = read_u64(&mut file)?;
 
@@ -105,6 +113,7 @@ pub fn read_back(path: &str) -> io::Result<()> {
 
     let entry_count = read_u32(&mut file)?;
 
+    // Each manifest entry stores the payload name and its byte range.
     let mut entries = Vec::with_capacity(entry_count as usize);
 
     for _ in 0..entry_count {
@@ -133,7 +142,9 @@ pub fn read_back(path: &str) -> io::Result<()> {
     Ok(())
 }
 
-fn find_optimal(entries: &[Entry]) -> Result<(u64, u64), io::Error> {
+/// Pick the payload that best matches the CPU's supported x86-64 level.
+/// Pick the payload that best matches the CPU's supported x86-64 level.
+fn find_optimal(entries: &[Entry]) -> io::Result<(u64, u64)> {
     let level = detect_x86_level();
 
     let wanted = match level {
@@ -150,4 +161,21 @@ fn find_optimal(entries: &[Entry]) -> Result<(u64, u64), io::Error> {
     }
 
     Err(io::Error::new(io::ErrorKind::NotFound, "no compatible binary found"))
+}
+
+pub fn is_archive(path: &str) -> io::Result<bool> {
+    let mut file = OpenOptions::new().read(true).open(path)?;
+
+    let file_size = file.metadata()?.len();
+
+    if file_size < FOOTER_SIZE {
+        return Ok(false);
+    }
+
+    file.seek(SeekFrom::End(-(FOOTER_SIZE as i64)))?;
+
+    let mut identifier = [0u8; 8];
+    file.read_exact(&mut identifier)?;
+
+    Ok(&identifier == FOOTER_MAGIC)
 }

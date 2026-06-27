@@ -1,7 +1,8 @@
 use anyhow::{Context, Result, bail};
 use std::{
     collections::HashMap,
-    fs::{self, read_dir},
+    fs::{self, OpenOptions, read_dir},
+    io::{self, Read, Seek, SeekFrom},
     path::{Path, PathBuf},
     process::Command,
 };
@@ -291,3 +292,4 @@ fn find_first_source(project_dir: &Path, extensions: &[&str]) -> Result<PathBuf>
 
     sources.into_iter().next().context("could not find source file")
 }
+
