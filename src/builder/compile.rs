@@ -292,4 +292,3 @@ fn find_first_source(project_dir: &Path, extensions: &[&str]) -> Result<PathBuf>
 
     sources.into_iter().next().context("could not find source file")
 }
-

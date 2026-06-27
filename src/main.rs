@@ -1,10 +1,11 @@
-use crate::compile_logic::language::compile_lang;
-use crate::package_logic::format::{is_archive, pack_files};
+use crate::archive::format::{is_archive, pack_files};
+use crate::builder::compile::compile_lang;
 use std::process::Command;
 use std::{self, env, fs, io};
 
-mod compile_logic;
-mod package_logic;
+mod arch;
+mod archive;
+mod builder;
 
 fn main() -> Result<(), anyhow::Error> {
     let current_path = env::current_exe()?;

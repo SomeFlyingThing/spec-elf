@@ -1,4 +1,4 @@
-use crate::compile_logic::level::{X86Level, detect_x86_level};
+use crate::arch::x86::{X86Level, detect_x86_level};
 use std::{
     fs::{File, OpenOptions},
     io::{self, Error, ErrorKind, Read, Seek, SeekFrom, Write},
