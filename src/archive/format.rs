@@ -75,7 +75,7 @@ where
     Ok(())
 }
 
-/// Read the packed file footer, locate the best matching payload, and extract it.
+/// Read the packed file footer, locate the best matching payload, and return it
 pub fn read_back<P>(path: P) -> io::Result<Vec<u8>>
 where
     P: AsRef<Path>,
@@ -157,12 +157,7 @@ fn find_optimal(entries: &[Entry]) -> io::Result<(u64, u64)> {
     let wanted_with_underscores = wanted.replace('-', "_");
 
     for entry in entries {
-        if entry.name == wanted
-            || entry.name.ends_with(wanted)
-            || entry.name == wanted_with_underscores
-            || entry.name.ends_with(&wanted_with_underscores)
-            || entry.name == format!("-march={wanted}")
-        {
+        if entry.name == wanted || entry.name.ends_with(wanted) || entry.name == wanted_with_underscores || entry.name.ends_with(&wanted_with_underscores) || entry.name == format!("-march={wanted}") {
             return Ok((entry.offset, entry.size));
         }
     }
@@ -187,5 +182,18 @@ where
     let mut identifier = [0u8; 8];
     file.read_exact(&mut identifier)?;
 
-    Ok(&identifier == FOOTER_MAGIC)
+
+    //check the last byte bcs it is a u8 FOOTER_IS_LAUNCHED
+    if &identifier == FOOTER_MAGIC {
+        file.seek(SeekFrom::End(-1));
+        let mut is_launched = [0u8; 1];
+        file.read_exact(&mut is_launched);
+
+        if is_launched[0] == 1{
+            return Ok(true);
+        }
+
+    }
+
+    Ok(false)
 }
