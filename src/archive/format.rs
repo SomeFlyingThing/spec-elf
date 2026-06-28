@@ -185,9 +185,9 @@ where
 
     //check the last byte bcs it is a u8 FOOTER_IS_LAUNCHED
     if &identifier == FOOTER_MAGIC {
-        file.seek(SeekFrom::End(-1));
+        file.seek(SeekFrom::End(-1))?;
         let mut is_launched = [0u8; 1];
-        file.read_exact(&mut is_launched);
+        file.read_exact(&mut is_launched)?;
 
         if is_launched[0] == 1{
             return Ok(true);

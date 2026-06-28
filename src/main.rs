@@ -1,13 +1,25 @@
 use crate::archive::format::{is_archive, pack_files, read_back};
 use crate::builder::compile::compile_lang;
-use std::process::Command;
+use std::io::ErrorKind;
+use std::os::unix::process;
+use std::process::{Command, ExitCode, ExitStatus};
 use std::{self, env, fs, path::Path};
 
 mod arch;
 mod archive;
 mod builder;
 
+fn help() -> ! {
+    println!("you can run spec-elf with no args if you run directly on target dir or you can use the argumment --dir or -dir followed by the target dir");
+    std::process::exit(0);
+}
 fn main() -> Result<(), anyhow::Error> {
+    let args: Vec<String> = env::args().collect();
+
+    if !args.is_empty() && (args[1].to_lowercase() == "--help" || args[1].to_lowercase() == "-help" || args[1].to_lowercase() == "-h" || args[1].to_lowercase() == "--h"){
+        help();
+    }
+    
     let current_path = env::current_exe()?;
     let current_name = current_path.file_name().expect("current executable has no file name");
 
@@ -26,18 +38,33 @@ fn main() -> Result<(), anyhow::Error> {
 
         return Ok(());
     }
-
-    println!("I hope your running this on project root");
+    if &args[1].to_lowercase() == "--dir" && &args[1].to_lowercase() == "-dir" && !&args[2].is_empty() {
+        loop {
+            match env::set_current_dir(&args[2]) {
+                Ok(_) => {
+                    break;
+                }
+                Err(e) => match e.kind() {
+                    ErrorKind::NotFound => {
+                        println!("directory not found");
+                    }
+                    ErrorKind::PermissionDenied => {
+                        println!("wrong permissions");
+                    }
+                    ErrorKind::NotADirectory => {
+                        println!("this is not a dir");
+                    }
+                    _ => println!("idk this error"),
+                },
+            }
+        }
+    }
 
     let dir = env::current_dir()?;
     let dst = compile_lang(dir.to_str().expect("current directory is not valid UTF-8"))?;
 
     let output_path = dir.join(current_name);
-    let pack_output_path = if same_path(&current_path, &output_path) {
-        output_path.with_extension("packed")
-    } else {
-        output_path.clone()
-    };
+    let pack_output_path = if same_path(&current_path, &output_path) { output_path.with_extension("packed") } else { output_path.clone() };
 
     pack_files(&current_path, &pack_output_path, &dst)?;
 
@@ -46,6 +73,7 @@ fn main() -> Result<(), anyhow::Error> {
     }
 
     //dont wait so child deletes us
+    #[allow(clippy::zombie_processes)]
     if !same_path(&current_path, &output_path) {
         let _child = Command::new("rm").arg("-f").arg(current_path).spawn().expect("failed to remove current");
     }
