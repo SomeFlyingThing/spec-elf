@@ -212,3 +212,106 @@ where
 
     Ok(false)
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::arch::x86::{X86Level, detect_x86_level, native_hasher};
+    use std::fs;
+
+    #[test]
+    fn normal_file_is_not_archive() -> io::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let file = dir.path().join("plain-file");
+
+        fs::write(&file, b"hello")?;
+
+        assert!(!is_archive(&file)?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn packed_file_is_archive() -> io::Result<()> {
+        let dir = tempfile::tempdir()?;
+
+        let launcher = dir.path().join("launcher");
+        let output = dir.path().join("packed");
+
+        let native = dir.path().join("c-native");
+        let x86_64 = dir.path().join("c-x86-64");
+        let v2 = dir.path().join("c-x86-64-v2");
+        let v3 = dir.path().join("c-x86-64-v3");
+        let v4 = dir.path().join("c-x86-64-v4");
+
+        fs::write(&launcher, b"fake launcher")?;
+        fs::write(&native, b"native payload")?;
+        fs::write(&x86_64, b"x86-64 payload")?;
+        fs::write(&v2, b"x86-64-v2 payload")?;
+        fs::write(&v3, b"x86-64-v3 payload")?;
+        fs::write(&v4, b"x86-64-v4 payload")?;
+
+        let payloads = vec![
+            native.display().to_string(),
+            x86_64.display().to_string(),
+            v2.display().to_string(),
+            v3.display().to_string(),
+            v4.display().to_string(),
+        ];
+
+        pack_files(&launcher, &output, &payloads)?;
+
+        assert!(is_archive(&output)?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn packed_file_reads_best_payload() -> io::Result<()> {
+        let dir = tempfile::tempdir()?;
+
+        let launcher = dir.path().join("launcher");
+        let output = dir.path().join("packed");
+
+        let native = dir.path().join("c-native");
+        let x86_64 = dir.path().join("c-x86-64");
+        let v2 = dir.path().join("c-x86-64-v2");
+        let v3 = dir.path().join("c-x86-64-v3");
+        let v4 = dir.path().join("c-x86-64-v4");
+
+        fs::write(&launcher, b"fake launcher")?;
+        fs::write(&native, b"native payload")?;
+        fs::write(&x86_64, b"x86-64 payload")?;
+        fs::write(&v2, b"x86-64-v2 payload")?;
+        fs::write(&v3, b"x86-64-v3 payload")?;
+        fs::write(&v4, b"x86-64-v4 payload")?;
+
+        let payloads = vec![
+            native.display().to_string(),
+            x86_64.display().to_string(),
+            v2.display().to_string(),
+            v3.display().to_string(),
+            v4.display().to_string(),
+        ];
+
+        pack_files(&launcher, &output, &payloads)?;
+
+        let actual = read_back(&output)?;
+
+        let expected: &[u8] = if native_hasher().is_some() {
+            b"native payload"
+        } else {
+            match detect_x86_level() {
+                X86Level::X86_64 => b"x86-64 payload",
+                X86Level::V2 => b"x86-64-v2 payload",
+                X86Level::V3 => b"x86-64-v3 payload",
+                X86Level::V4 => b"x86-64-v4 payload",
+            }
+        };
+
+        assert_eq!(actual, expected);
+
+        Ok(())
+    }
+}

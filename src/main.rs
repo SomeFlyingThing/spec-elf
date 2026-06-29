@@ -25,9 +25,9 @@ fn main() -> Result<(), anyhow::Error> {
     if args.len() > 2 {
         //it has argss
         has_args = Args::Yes;
-        if args[1].to_lowercase() == "--help" || args[1].to_lowercase() == "-help" || args[1].to_lowercase() == "-h" || args[1].to_lowercase() == "--h" {
-            help();
-        }
+    }
+    if args.len() > 1 && args[1].to_lowercase() == "--help" || args[1].to_lowercase() == "-help" || args[1].to_lowercase() == "-h" || args[1].to_lowercase() == "--h" {
+        help();
     }
 
     let current_path = env::current_exe()?;
