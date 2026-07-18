@@ -1,6 +1,6 @@
 # spec-elf
 
-`spec-elf` builds several x86-64 variants of a project and combines them with a small launcher into one ELF executable. At runtime, the launcher detects the host CPU level and starts the best compatible payload.
+`spec-elf` builds several x86-64 variants of a project and combines them with a small launcher into one ELF executable. At runtime, the launcher detects the host CPU level and starts the best compatible payload, this only happens in the first run, then it is replaced with the best version for your machine.
 
 ## Requirements
 
