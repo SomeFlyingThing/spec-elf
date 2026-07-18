@@ -213,7 +213,6 @@ where
     Ok(false)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -252,13 +251,7 @@ mod tests {
         fs::write(&v3, b"x86-64-v3 payload")?;
         fs::write(&v4, b"x86-64-v4 payload")?;
 
-        let payloads = vec![
-            native.display().to_string(),
-            x86_64.display().to_string(),
-            v2.display().to_string(),
-            v3.display().to_string(),
-            v4.display().to_string(),
-        ];
+        let payloads = vec![native.display().to_string(), x86_64.display().to_string(), v2.display().to_string(), v3.display().to_string(), v4.display().to_string()];
 
         pack_files(&launcher, &output, &payloads)?;
 
@@ -287,13 +280,7 @@ mod tests {
         fs::write(&v3, b"x86-64-v3 payload")?;
         fs::write(&v4, b"x86-64-v4 payload")?;
 
-        let payloads = vec![
-            native.display().to_string(),
-            x86_64.display().to_string(),
-            v2.display().to_string(),
-            v3.display().to_string(),
-            v4.display().to_string(),
-        ];
+        let payloads = vec![native.display().to_string(), x86_64.display().to_string(), v2.display().to_string(), v3.display().to_string(), v4.display().to_string()];
 
         pack_files(&launcher, &output, &payloads)?;
 

@@ -1,34 +1,26 @@
 use crate::archive::format::{is_archive, pack_files, read_back};
 use crate::builder::compile::compile_lang;
-use std::io::ErrorKind;
 use std::process::Command;
 use std::{self, env, fs, path::Path};
 
 mod arch;
 mod archive;
 mod builder;
-#[derive(PartialEq)]
-enum Args {
-    No,
-    Yes,
-}
-
 fn help() -> ! {
-    println!("you can run spec-elf with no arguments if you run directly on target dir or you can use the argumment --dir or -dir followed by the target dir");
+    println!("Usage: spec-elf [--dir <project-directory>]");
+    println!();
+    println!("Builds compatible x86-64 variants of a C, C++, Rust, or Zig project and packages them into one executable.");
     std::process::exit(0);
 }
 fn main() -> Result<(), anyhow::Error> {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = env::args().skip(1).collect();
 
-    // marker for arss
-    let mut has_args = Args::No;
-    if args.len() > 2 {
-        //it has argss
-        has_args = Args::Yes;
-    }
-    if args.len() > 1 && args[1].to_lowercase() == "--help" || args[1].to_lowercase() == "-help" || args[1].to_lowercase() == "-h" || args[1].to_lowercase() == "--h" {
-        help();
-    }
+    let project_dir = match args.as_slice() {
+        [] => None,
+        [flag] if matches!(flag.as_str(), "--help" | "-help" | "-h" | "--h") => help(),
+        [flag, directory] if matches!(flag.as_str(), "--dir" | "-dir") && !directory.is_empty() => Some(directory),
+        _ => anyhow::bail!("invalid arguments; run `spec-elf --help` for usage"),
+    };
 
     let current_path = env::current_exe()?;
     let current_name = current_path.file_name().expect("current executable has no file name");
@@ -50,26 +42,8 @@ fn main() -> Result<(), anyhow::Error> {
 
         return Ok(());
     }
-    if has_args == Args::Yes && (args[1].to_lowercase() == "--dir" || args[1].to_lowercase() == "-dir") && !args[2].is_empty() {
-        loop {
-            match env::set_current_dir(&args[2]) {
-                Ok(_) => {
-                    break;
-                }
-                Err(e) => match e.kind() {
-                    ErrorKind::NotFound => {
-                        println!("directory not found");
-                    }
-                    ErrorKind::PermissionDenied => {
-                        println!("wrong permissions");
-                    }
-                    ErrorKind::NotADirectory => {
-                        println!("this is not a dir");
-                    }
-                    _ => println!("idk this error"),
-                },
-            }
-        }
+    if let Some(project_dir) = project_dir {
+        env::set_current_dir(project_dir).map_err(|error| anyhow::anyhow!("could not change to project directory `{project_dir}`: {error}"))?;
     }
 
     let dir = env::current_dir()?;
