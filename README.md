@@ -18,14 +18,14 @@ The resulting launcher is `target/release/spec-elf`.
 
 ## Package a project
 
-Run the launcher from a project directory, or pass the directory explicitly:
+Pass the project directory explicitly. Use `.` for the current directory:
 
 ```bash
 cd /path/to/project
-/path/to/spec-elf/target/release/spec-elf
+/path/to/spec-elf/target/release/spec-elf .
 
 # or
-/path/to/spec-elf/target/release/spec-elf --dir /path/to/project
+/path/to/spec-elf/target/release/spec-elf /path/to/project
 ```
 
 The project language is inferred from source-file extensions. The tool supports C, C++, Rust, and Zig projects. It writes intermediate binaries to `build/` and produces a packed executable named `spec-elf` in the project directory.

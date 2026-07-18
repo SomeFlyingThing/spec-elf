@@ -7,7 +7,8 @@ mod arch;
 mod archive;
 mod builder;
 fn help() -> ! {
-    println!("Usage: spec-elf [--dir <project-directory>]");
+    println!("Usage: spec-elf <project-directory>");
+    println!("Use `.` for the current directory.");
     println!();
     println!("Builds compatible x86-64 variants of a C, C++, Rust, or Zig project and packages them into one executable.");
     std::process::exit(0);
@@ -16,9 +17,9 @@ fn main() -> Result<(), anyhow::Error> {
     let args: Vec<String> = env::args().skip(1).collect();
 
     let project_dir = match args.as_slice() {
-        [] => None,
         [flag] if matches!(flag.as_str(), "--help" | "-help" | "-h" | "--h") => help(),
-        [flag, directory] if matches!(flag.as_str(), "--dir" | "-dir") && !directory.is_empty() => Some(directory),
+        [directory] if !directory.is_empty() => directory,
+        [] => anyhow::bail!("missing project directory; use `.` for the current directory"),
         _ => anyhow::bail!("invalid arguments; run `spec-elf --help` for usage"),
     };
 
@@ -42,9 +43,7 @@ fn main() -> Result<(), anyhow::Error> {
 
         return Ok(());
     }
-    if let Some(project_dir) = project_dir {
-        env::set_current_dir(project_dir).map_err(|error| anyhow::anyhow!("could not change to project directory `{project_dir}`: {error}"))?;
-    }
+    env::set_current_dir(project_dir).map_err(|error| anyhow::anyhow!("could not change to project directory `{project_dir}`: {error}"))?;
 
     let dir = env::current_dir()?;
     let dst = compile_lang(dir.to_str().expect("current directory is not valid UTF-8"))?;
